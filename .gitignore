@@ -1,0 +1,12 @@
+# data files
+*.tsv
+*.csv
+
+# graph files
+*.svg
+
+# build folder
+build/
+
+# vscode folder
+.vscode/
