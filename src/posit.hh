@@ -500,7 +500,7 @@ constexpr posit operator*=(const posit& rhs) noexcept;
 constexpr posit operator/=(const posit& rhs) noexcept;
 
 // comparisons are trivial
-constexpr auto operator<=>(const posit& rhs) const noexcept = default;
+constexpr bool operator<=>(const posit& rhs) const noexcept = default;
 
 // ostreams
 friend std::ostream& operator<<(std::ostream& os, const posit& obj);

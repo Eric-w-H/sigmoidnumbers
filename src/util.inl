@@ -48,7 +48,7 @@ constexpr inline T static_right_shift(const T init)
 { return static_shift<T, false, exp>(init); }
 
 template<class T, bool Left>
-inline T shift(const T init, const int32_t exp)
+inline T shift(const T init, int32_t exp)
 {
   for(; exp > 0; exp >>= 5)
     init = Left ? init << exp : init >> exp;

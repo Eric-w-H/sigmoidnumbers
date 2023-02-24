@@ -195,7 +195,7 @@ constexpr quire<BITS, ES, C>::operator quire<BITS, ES, C2>() const noexcept
   }
 
   // need to add carry guard bits
-  constexpr uint32_t expand = quiresize_to - quiresize_from;
+  // constexpr uint32_t expand = quiresize_to - quiresize_from;
   
   type_to result{posit_t{0}};
 
@@ -284,10 +284,10 @@ constexpr quire<BITS, ES, C>::operator quire<BITS, ES2, C>() const noexcept
   }
   // scaling up
   constexpr int32_t power_diff = exp_stepsize * (ES2 - ES);
-  constexpr int32_t array_diff_bits = type_to::quiresize - type_from::quiresize;
+  // constexpr int32_t array_diff_bits = type_to::quiresize - type_from::quiresize;
   constexpr int32_t off_the_bottom_bits = 1 << power_diff;
   // total difference minus the bit from the bottom
-  constexpr int32_t off_the_top_bits = array_diff_bits - (1 << power_diff);
+  // constexpr int32_t off_the_top_bits = array_diff_bits - (1 << power_diff);
 
   constexpr int32_t bottom_start_idx = off_the_bottom_bits/8;
   constexpr int32_t top_start_idx = type_to::array_size + off_the_bottom_bits/8;
@@ -520,8 +520,10 @@ constexpr quire<BITS,ES,C> operator-(const quire<BITS,ES,C>& lhs, const posit<BI
 /////////////////////////////////////////////////
 
 template<int BITS, int ES>
-constexpr typename posit<BITS,ES>::posit_data_t power_to_bit_encoding(posit_data_t pow) noexcept
+constexpr typename posit<BITS,ES>::posit_data_t 
+power_to_bit_encoding(typename posit<BITS,ES>::posit_data_t pow) noexcept
 {
+  using posit_data_t = typename posit<BITS,ES>::posit_data_t;
   constexpr posit_data_t regime_coef = static_left_shift<posit_data_t, ES>(1);
   
   // p = (2^ES)*r + e
@@ -561,17 +563,18 @@ constexpr typename posit<BITS,ES>::posit_data_t power_to_bit_encoding(posit_data
   //  OR
   //  shifted out bits of exp > 1
   constexpr posit_data_t shifted_out_bits_of_exp = exp_shifts_left ? 0 : exp & (left_shift<posit_data_t>(2, ES - run_left_shift) - 1);
-  constexpr bool promote_to_next_posit = (posit_of_power == maxPos().m_data) ? false
+  constexpr bool promote_to_next_posit = (posit_of_power == posit<BITS,ES>::maxPos().m_data) ? false
     : (shifted_out_bits_of_exp > 1) || ((shifted_out_bits_of_exp == 1) && ((posit_of_power & 1) == 1));
 
   return posit_of_power + (promote_to_next_posit ? 1 : 0);
 }
 
 template<int BITS, int ES>
-inline constexpr posit<BITS,ES> data_to_posit(posit_data_t dat) noexcept
+inline constexpr posit<BITS,ES> data_to_posit(typename posit<BITS,ES>::posit_data_t dat) noexcept
 {
+  using posit_data_t = typename posit<BITS,ES>::posit_data_t;
   posit<BITS,ES> res{};
-  res.m_data = dat;
+  res.m_data = dat & (static_left_shift<posit_data_t, BITS>(1) - 1);
   return res;
 }
 
@@ -589,6 +592,7 @@ template<typename Integer, std::enable_if_t<std::is_integral<Integer>::value, bo
 constexpr posit<BITS,ES>::posit(const Integer val) noexcept
   : m_data{0}
 {
+  using posit_data_t = typename posit<BITS,ES>::posit_data_t;
   // check exception cases
   if(val == 0) return;
   if(val == static_shift<Integer,true,sizeof(Integer)>(1)) return;
@@ -658,6 +662,7 @@ template<typename Float, std::enable_if_t<std::is_floating_point<Float>::value, 
 constexpr posit<BITS,ES>::posit(Float val) noexcept
   : m_data{0}
 {
+  using posit_data_t = typename posit<BITS,ES>::posit_data_t;
   // check exception cases
   if constexpr (std::isnan(val)) { m_data = NaR().m_data; return; }
   if constexpr (std::abs(val) == 0) return;
@@ -715,22 +720,21 @@ constexpr posit<BITS,ES>::posit(Float val) noexcept
     m_data = regime_shifted
             | exponent_shifted
             | fraction;
-    return;
   } 
-  if constexpr (include_full_exp)
+  else if constexpr (include_full_exp)
   { 
     m_data = regime_shifted
             | exponent;
-    return;
   }
-  if constexpr (include_exponent)
+  else if constexpr (include_exponent)
   {
     m_data = regime_shifted
             | exponent_shifted_r;
-    return;
-  } 
+  } else {
+    m_data = regime_mask;
+  }
 
-  m_data = regime_mask;
+  if constexpr (sign) m_data = -m_data;
 }
 
 //=========================================================
@@ -741,17 +745,19 @@ template<int BITS, int ES>
 template<int _BITS>
 constexpr posit<BITS,ES>::operator posit<_BITS,ES>() const noexcept
 {
-  constexpr typename posit<_BITS,ES>::posit_data_t data = m_data;
+  using posit_data_t = typename posit<BITS,ES>::posit_data_t;
+  constexpr posit_data_t data = m_data;
   if constexpr (_BITS > BITS)
-    return posit<_BITS,ES>{std::bitset<_BITS>{static_shift<posit_data_t,true ,(_BITS - BITS)>(data)}};
+    return data_to_posit(static_left_shift< posit_data_t,(_BITS -  BITS)>(data));
   else
-    return posit<_BITS,ES>{std::bitset<_BITS>{static_shift<posit_data_t,false,(BITS - _BITS)>(data)}};
+    return data_to_posit(static_right_shift<posit_data_t,( BITS - _BITS)>(data));
 }
 
 template<int BITS, int ES>
 template<int _ES>
 constexpr posit<BITS,ES>::operator posit<BITS,_ES>() const noexcept
 {
+  using posit_data_t = typename posit<BITS,ES>::posit_data_t;
   constexpr posit_data_t data_bit_length = sizeof(posit_data_t) * 8;
 
   // calculate new regime run & exponent value
@@ -773,8 +779,8 @@ constexpr posit<BITS,ES>::operator posit<BITS,_ES>() const noexcept
   constexpr posit_data_t new_frac_bitwidth = BITS - new_exp_regime_len;
 
   if constexpr (new_frac_bitwidth <= 0) {
-    if constexpr (m_data < 0) return posit<BITS,_ES>(std::bitset<BITS>{-new_regime_run});
-    else return posit<BITS,_ES>(std::bitset<BITS>{new_regime_run});
+    if constexpr (m_data < 0) return data_to_posit(-new_regime_run);
+    else return data_to_posit(new_regime_run);
   }
 
   // calculate the new fraction
@@ -830,7 +836,7 @@ template<int BITS, int ES>
 template<typename Float, std::enable_if_t<std::is_floating_point<Float>::value, bool>>
 constexpr posit<BITS,ES>::operator Float() const noexcept
 {
-  using float_bits_t = posit_internal_repr_t<8 * sizeof(Float)>;
+  using posit_data_t = typename posit<BITS,ES>::posit_data_t;
   
   constexpr posit_data_t frac_denom = BITS - ES - fraction().regime_bitwidth();
   constexpr posit_data_t frac_mask = left_shift<posit_data_t>(1,frac_denom) - 1;
@@ -883,12 +889,14 @@ constexpr posit<BITS,ES> posit<BITS,ES>::maxPos() noexcept
 template<int BITS, int ES>
 constexpr posit<BITS,ES> posit<BITS,ES>::NaR() noexcept
 {
-  return posit<BITS,ES>{static_shift<posit_data_t,true,BITS-1>(1)};
+  using posit_data_t = typename posit<BITS,ES>::posit_data_t;
+  return data_to_posit(static_left_shift<posit_data_t,BITS-1>(1));
 }
 
 template<int BITS, int ES>
 constexpr typename posit<BITS,ES>::posit_data_t posit<BITS,ES>::pIntMax() noexcept
 {
+  using posit_data_t = typename posit<BITS,ES>::posit_data_t;
   constexpr posit_data_t raw_power = power_of_pIntMax<BITS,ES>::value;
   constexpr posit_data_t power = raw_power < 1 ? 1 : raw_power;
   return static_left_shift<posit_data_t,power>(1);
@@ -910,13 +918,14 @@ constexpr int32_t posit<BITS,ES>::precision() noexcept
 template<int BITS, int ES>
 constexpr bool posit<BITS,ES>::isNaR() const noexcept
 {
-  return m_data == NaR();
+  return m_data == NaR().m_data;
 }
 
 template<int BITS, int ES>
 constexpr typename posit<BITS,ES>::posit_data_t 
 posit<BITS,ES>::regime() const noexcept
 {
+  using posit_data_t = typename posit<BITS,ES>::posit_data_t;
   if(isNaR()) return m_data;
   constexpr posit_data_t regime_coef = static_left_shift<posit_data_t,ES>(2);
   constexpr posit_data_t regime_on_left = static_left_shift<posit_data_t,(8*sizeof(posit_data_t)-BITS)>(m_data);
@@ -935,6 +944,7 @@ template<int BITS, int ES>
 constexpr typename posit<BITS,ES>::posit_data_t 
 posit<BITS,ES>::regime_bitwidth() const noexcept
 {
+  using posit_data_t = typename posit<BITS,ES>::posit_data_t;
   if(isNaR()) return m_data;
   constexpr posit_data_t regime_on_left = static_left_shift<posit_data_t,(8*sizeof(posit_data_t)-BITS)>(m_data);
 
@@ -949,6 +959,7 @@ template<int BITS, int ES>
 constexpr typename posit<BITS,ES>::posit_data_t 
 posit<BITS,ES>::exponent() const noexcept
 {
+  using posit_data_t = typename posit<BITS,ES>::posit_data_t;
   if(isNaR()) return m_data;
   constexpr posit_data_t regime_on_left = static_shift<posit_data_t,true,(8*sizeof(posit_data_t)-BITS)>(m_data);
 
@@ -966,6 +977,7 @@ template<int BITS, int ES>
 constexpr typename posit<BITS,ES>::posit_data_t 
 posit<BITS,ES>::power() const noexcept
 {
+  using posit_data_t = typename posit<BITS,ES>::posit_data_t;
   if(isNaR()) return m_data;
   constexpr posit_data_t regime_coef = static_shift<posit_data_t,true,ES>(2);
   constexpr posit_data_t regime_on_left = static_shift<posit_data_t,true,(8*sizeof(posit_data_t)-BITS)>(m_data);
@@ -977,7 +989,7 @@ posit<BITS,ES>::power() const noexcept
   constexpr posit_data_t regime_value = regime_is_ones  ?  regime_bits - 1 
                                                         : -regime_bits;
 
-  constexpr posit_data_t exponent_on_left = left_shift<posit_data_t,>(regime_on_left, (regime_bits+1));
+  constexpr posit_data_t exponent_on_left = left_shift<posit_data_t>(regime_on_left, (regime_bits+1));
   constexpr posit_data_t exponent_on_right = static_right_shift<posit_data_t,(8*sizeof(posit_data_t) - ES)>(exponent_on_left);
 
   return m_data < 0 ? -(regime_value * regime_coef + exponent_on_right + 1)
@@ -988,6 +1000,7 @@ template<int BITS, int ES>
 constexpr posit<BITS,ES>
 posit<BITS,ES>::rtz() const noexcept
 {
+  using posit_data_t = typename posit<BITS,ES>::posit_data_t;
   if(isNaR() || m_data == 0) return *this;
   constexpr posit_data_t lower_frac_bitwidth = BITS - regime_bitwidth() - ES + 1 - power();
   // if the power is greater than the fraction denominator
@@ -996,7 +1009,7 @@ posit<BITS,ES>::rtz() const noexcept
   if constexpr (lower_frac_bitwidth >= BITS - 3) return posit<BITS,ES>{0};
   constexpr posit_data_t lower_bit_mask = left_shift<posit_data_t>(2, lower_frac_bitwidth) - 1;
   constexpr posit_data_t modified_posit = m_data & ~lower_bit_mask;
-  return std::bit_cast<posit<BITS,ES>>(modified_posit);
+  return data_to_posit(modified_posit);
 }
 
 template<int BITS, int ES>
@@ -1019,17 +1032,19 @@ template<int BITS, int ES>
 constexpr posit<BITS,ES>
 posit<BITS,ES>::sign() const noexcept
 {
+  using posit_data_t = typename posit<BITS,ES>::posit_data_t;
   if(isNaR() || m_data == 0) return *this;
   constexpr posit_data_t one = static_left_shift<posit_data_t, BITS - 2>(1);
   constexpr posit_data_t n_1 = static_left_shift<posit_data_t, BITS - 2>(3);
   constexpr posit_data_t result = m_data < 0 ? n_1 : one;
-  return std::bit_cast<posit<BITS,ES>>(result);
+  return data_to_posit(result);
 }
 
 template<int BITS, int ES>
 constexpr posit<BITS,ES>
 posit<BITS,ES>::reciprocal() const noexcept
 {
+  using posit_data_t = typename posit<BITS,ES>::posit_data_t;
   if(isNaR() || m_data == 0) return NaR();
 
   // a posit is (1-3s + f) * 2^p
@@ -1057,10 +1072,10 @@ posit<BITS,ES>::reciprocal() const noexcept
 
   constexpr posit_data_t abs_D = D < 0 ? -D : D;
   // smallest power of 2 greater or equal to D
-  constexpr posit_data_t ceil_D = std::bit_ceil(abs_D);
+  constexpr posit_data_t ceil_D = std::__bit_ceil(abs_D);
   constexpr posit_data_t ceil_powD = std::__countr_zero(ceil_D);
   // largest power of 2 not greater than D
-  constexpr posit_data_t floor_D = std::bit_floor(abs_D);
+  constexpr posit_data_t floor_D = std::__bit_floor(abs_D);
   constexpr posit_data_t floor_powD = std::__countr_zero(floor_D);
 
   if constexpr (ceil_D == floor_D) return data_to_posit<BITS,ES>(power_to_regime<BITS,ES>(P - floor_D));
@@ -1075,8 +1090,10 @@ posit<BITS,ES>::reciprocal() const noexcept
   // obvious conditions:
   // if the num - (underestimate denom) is less than the smallest representable power, the true result is as well.
   // if the num - (overestimate denom) is greater than the smallest representable power, the true result is as well.
-  if constexpr (upper_est_pow <= minPos().power()) return m_data < 0 ? -minPos() : minPos();
-  if constexpr (lower_est_pow >= maxPos().power()) return m_data < 0 ? -maxPos() : maxPos();
+  if constexpr (upper_est_pow <= posit<BITS,ES>::minPos().power()) 
+    return m_data < 0 ? posit<BITS,ES>::minPos().negate() : posit<BITS,ES>::minPos();
+  if constexpr (lower_est_pow >= posit<BITS,ES>::maxPos().power()) 
+    return m_data < 0 ? posit<BITS,ES>::maxPos().negate() : posit<BITS,ES>::maxPos();
 
   using u_posit_data_t = std::make_unsigned_t<posit_data_t>;
 
@@ -1091,7 +1108,7 @@ posit<BITS,ES>::reciprocal() const noexcept
   constexpr posit_data_t final_pow = P - surrogate_pow_complement;
   constexpr posit_data_t result_pow_encoding = power_to_bit_encoding(final_pow);
   constexpr auto result_pow_encoding_posit = data_to_posit(result_pow_encoding);
-  if constexpr (result_pow_encoding_posit == minPos() || result_pow_encoding_posit == maxPos()) return result_pow_encoding_posit;
+  if constexpr ((result_pow_encoding_posit == posit<BITS,ES>::minPos()) || (result_pow_encoding_posit == posit<BITS,ES>::maxPos())) return result_pow_encoding_posit;
 
   constexpr posit_data_t bits_of_frac_in_encoding = BITS - 2 - result_pow_encoding_posit.regime_bitwidth() - ES;
   constexpr posit_data_t bits_of_frac_in_encoding_capped = bits_of_frac_in_encoding < 1 ? 0 : bits_of_frac_in_encoding;
