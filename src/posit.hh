@@ -309,6 +309,7 @@ static constexpr int32_t precision() noexcept;
 
 // Methods
 constexpr bool isNaR() const noexcept;
+constexpr posit_data_t raw() const noexcept;
 constexpr posit_data_t regime() const noexcept; // (-BITS < regime < BITS)*(2<<ES)
 constexpr posit_data_t regime_bitwidth() const noexcept; // 2 <= regime_bitwidth < BITS
 constexpr posit_data_t exponent() const noexcept; // 0 <= exponent < (1<<ES)
@@ -321,6 +322,7 @@ constexpr posit reciprocal() const noexcept; // 1/this
 
 // Methods as friends
 constexpr friend bool isNaR(const posit& obj) noexcept;
+constexpr friend posit_data_t raw(const posit& obj) noexcept;
 constexpr friend posit_data_t regime(const posit& obj) noexcept; // (-BITS < regime < BITS)*(2<<ES)
 constexpr friend posit_data_t regime_bitwidth(const posit& obj) noexcept; // 2 <= regime_bitwidth < BITS
 constexpr friend posit_data_t exponent(const posit& obj) noexcept; // 0 <= exponent < (1<<ES)
@@ -481,7 +483,7 @@ friend constexpr posit fMM(const posit& first, const posit& second, const posit&
 // operators
 //--------------------------------------------------
 // assignment operators
-constexpr posit operator=(const posit& other) const noexcept;
+constexpr posit operator=(const posit& other) = default;
 constexpr posit& operator=(posit&& other) = default;
 
 // negation
@@ -500,10 +502,7 @@ constexpr posit operator*=(const posit& rhs) noexcept;
 constexpr posit operator/=(const posit& rhs) noexcept;
 
 // comparisons are trivial
-constexpr bool operator<=>(const posit& rhs) const noexcept = default;
-
-// ostreams
-friend std::ostream& operator<<(std::ostream& os, const posit& obj);
+constexpr auto operator<=>(const posit& rhs) const noexcept = default;
 
 
 //--------------------------------------------------
@@ -557,5 +556,9 @@ template<int32_t BITS, int32_t ES_TEST, int32_t DIR, class = void>
 struct count_until_decr;
 
 } // end namespace posit
+
+// ostreams
+template<int32_t BITS, int32_t ES>
+std::ostream& operator<<(std::ostream& os, const posit::template posit<BITS,ES>& obj);
 
 #include "posit.inl"

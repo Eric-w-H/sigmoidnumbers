@@ -190,19 +190,19 @@ public:
     return lhs;
   }
 
-  static Posit from_bits(const dtype& bits) { return Posit{bits}; }
-  static Posit from_bits(const std::bitset<BITS>& bits) { return Posit{static_cast<dtype>(bits.to_ullong())}; }
-  template<typename I, std::enable_if_t<std::is_integral<I>::value, bool> = true>
-  static Posit from_int(I num)
-  {
-    
-  }
+  // static Posit from_bits(const dtype& bits) { return Posit{bits}; }
+  // static Posit from_bits(const std::bitset<BITS>& bits) { return Posit{static_cast<dtype>(bits.to_ullong())}; }
+  // template<typename I, std::enable_if_t<std::is_integral<I>::value, bool> = true>
+  // static Posit from_int(I num)
+  // {
+  //   return Posit{};
+  // }
 
-  template<typename F, std::enable_if_t<std::is_floating_point<F>::value, bool> = true>
-  static Posit from_float(F num)
-  {
-    
-  }
+  // template<typename F, std::enable_if_t<std::is_floating_point<F>::value, bool> = true>
+  // static Posit from_float(F num)
+  // {
+  //   return Posit{};
+  // }
 
   //--------------------------------------------------
   // basic arithmetic
