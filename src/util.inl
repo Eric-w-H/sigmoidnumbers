@@ -61,3 +61,27 @@ inline T left_shift(const T init, const int32_t exp)
 template<class T>
 inline T right_shift(const T init, const int32_t exp)
 { return shift<T,false>(init,exp); }
+
+template<class T>
+constexpr T countl_zero(const T x) noexcept
+{
+  return std::__countl_zero(x) + 1;
+}
+
+template<class T>
+constexpr T countl_one(const T x) noexcept
+{
+  return std::__countl_one(x) + 1;
+}
+
+template<class T>
+constexpr T countr_zero(const T x) noexcept
+{
+  return std::__countr_zero(x) + 1;
+}
+
+template<class T>
+constexpr T countr_one(const T x) noexcept
+{
+  return std::__countl_zero(x) + 1;
+}

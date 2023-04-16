@@ -26,4 +26,16 @@ T left_shift(const T init, const int32_t exp);
 template<class T>
 T right_shift(const T init, const int32_t exp);
 
+template<class T>
+constexpr T countl_zero(const T x) noexcept;
+
+template<class T>
+constexpr T countl_one(const T x) noexcept;
+
+template<class T>
+constexpr T countr_zero(const T x) noexcept;
+
+template<class T>
+constexpr T countr_one(const T x) noexcept;
+
 #include "util.inl"

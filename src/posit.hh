@@ -221,7 +221,8 @@ using posit_internal_repr_t = typename posit_internal_repr<_BITS>::type;
 /** 
  * Posit
  */
-template<int32_t BITS, int32_t ES> struct posit
+template<int32_t BITS, int32_t ES>
+struct posit
 {
 //--------------------------------------------------
 // Friends
@@ -310,6 +311,9 @@ static constexpr int32_t precision() noexcept;
 // Methods
 constexpr bool isNaR() const noexcept;
 constexpr posit_data_t raw() const noexcept;
+constexpr posit_data_t fixed_significand() const noexcept; // returns the fixed-point repr of the significand
+constexpr posit_data_t fixed_fraction() const noexcept; // returns the fixed-point repr of the fraction
+constexpr posit_data_t fixed_sign() const noexcept; // returns an integegral 1, 0, -1, NaR like sign
 constexpr posit_data_t regime() const noexcept; // (-BITS < regime < BITS)*(2<<ES)
 constexpr posit_data_t regime_bitwidth() const noexcept; // 2 <= regime_bitwidth < BITS
 constexpr posit_data_t exponent() const noexcept; // 0 <= exponent < (1<<ES)
@@ -323,6 +327,7 @@ constexpr posit reciprocal() const noexcept; // 1/this
 // Methods as friends
 constexpr friend bool isNaR(const posit& obj) noexcept;
 constexpr friend posit_data_t raw(const posit& obj) noexcept;
+constexpr friend posit_data_t fixed_significand(const posit& obj) noexcept; // returns the fixed-point repr of the significand
 constexpr friend posit_data_t regime(const posit& obj) noexcept; // (-BITS < regime < BITS)*(2<<ES)
 constexpr friend posit_data_t regime_bitwidth(const posit& obj) noexcept; // 2 <= regime_bitwidth < BITS
 constexpr friend posit_data_t exponent(const posit& obj) noexcept; // 0 <= exponent < (1<<ES)
@@ -483,7 +488,7 @@ friend constexpr posit fMM(const posit& first, const posit& second, const posit&
 // operators
 //--------------------------------------------------
 // assignment operators
-constexpr posit operator=(const posit& other) = default;
+constexpr posit& operator=(const posit& other) = default;
 constexpr posit& operator=(posit&& other) = default;
 
 // negation
@@ -503,7 +508,7 @@ constexpr posit operator/=(const posit& rhs) noexcept;
 
 // comparisons are trivial
 constexpr auto operator<=>(const posit& rhs) const noexcept = default;
-
+constexpr bool operator==(const posit& rhs) const noexcept = default;
 
 //--------------------------------------------------
 // Undefined operators
@@ -554,6 +559,24 @@ struct posit_max_consec_int_range_t;
 
 template<int32_t BITS, int32_t ES_TEST, int32_t DIR, class = void>
 struct count_until_decr;
+
+
+
+template<int32_t BITS>
+constexpr int32_t max_exponent()
+{
+  int32_t ceil = 8*sizeof(posit_internal_repr_t<BITS>);
+  int32_t adj = std::__bit_floor(BITS-1);
+  return ceil-adj;
+}
+
+template<int32_t BITS>
+using maxposit_t = posit<BITS,max_exponent<BITS>()>;
+template<int32_t BITS>
+using maxquire_t = quire<BITS,max_exponent<BITS>()>;
+
+
+
 
 } // end namespace posit
 
