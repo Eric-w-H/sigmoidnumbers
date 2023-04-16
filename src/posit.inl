@@ -580,7 +580,10 @@ posit<BITS,ES>::data_to_posit(typename posit<BITS,ES>::posit_data_t dat) noexcep
 }
 
 template<int BITS, int ES>
-constexpr posit<BITS,ES>::posit() noexcept : m_data{0} { }
+constexpr posit<BITS,ES>::posit() noexcept : m_data{0} 
+{ 
+  static_assert(ES <= max_exponent<BITS>(), "ES would generate powers beyond maximum representable within provided bitwidth.");
+}
 
 template<int BITS, int ES>
 constexpr posit<BITS,ES>::posit(const posit& other) noexcept : m_data{other.m_data} { }

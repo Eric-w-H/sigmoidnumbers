@@ -571,11 +571,9 @@ constexpr int32_t max_exponent()
 }
 
 template<int32_t BITS>
-using maxposit_t = posit<BITS,max_exponent<BITS>()>;
+using max_posit_t = posit<BITS,max_exponent<BITS>()>;
 template<int32_t BITS>
-using maxquire_t = quire<BITS,max_exponent<BITS>()>;
-
-
+using max_quire_t = quire<BITS,max_exponent<BITS>()>;
 
 
 } // end namespace posit
