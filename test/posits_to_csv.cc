@@ -1,28 +1,29 @@
-#include <Posits.hh>
+#include "posit.hh"
 
-#define BITS 16
+#define BITS 8
+#define ES_MAX (BITS-1-std::__bit_floor(BITS-1))
 
 template<uint32_t ES>
 void print_posits(const std::bitset<BITS>& bits)
 {
-  using posit_t = Posit<BITS, ES>;
-  auto posit = posit_t::from_bits(bits);
+  using posit_t = posit::posit<BITS, ES>;
+  posit_t posit{bits};
   std::cout << posit << ',';
   print_posits<ES+1>(bits);
 }
 
 template<>
-void print_posits<BITS-2>(const std::bitset<BITS>& bits)
+void print_posits<ES_MAX>(const std::bitset<BITS>& bits)
 {
-  using posit_t = Posit<BITS, BITS-2>;
-  auto posit = posit_t::from_bits(bits);
+  using posit_t = posit::posit<BITS, BITS-2>;
+  posit_t posit{bits};
   std::cout << posit << '\n';
 }
 
 
 int main()
 {
-  for(int i = 0; i < BITS-1; ++i)
+  for(int i = 0; i <= ES_MAX; ++i)
     std::cout << ',' << i;
   std::cout << '\n';
 
