@@ -144,7 +144,7 @@ constexpr posit<BITS,ES>& sign(const quire<BITS,ES,C>& obj) noexcept { return ob
 template<int32_t BITS, int32_t ES, int32_t C>
 constexpr quire<BITS,ES,C>::operator posit<BITS,ES>() const noexcept
 {
-  posit_t sign = sign();
+  posit_t sign = this->sign();
   if(sign.isNaR() || sign == posit_t{0}) return sign;
 
   // we are now guaranteed that the number is nonzero
@@ -397,8 +397,8 @@ constexpr quire<BITS, ES, C> quire<BITS, ES, C>::qMulAdd(const posit_t& toMulA, 
   constexpr int32_t FRAC_BITWIDTH = BITS - 3 - ES;
   constexpr dtype powerA = toMulA.power();
   constexpr dtype powerB = toMulB.power();
-  constexpr dtype fracA = toMulA.fraction().m_data & (static_shift<dtype,true,FRAC_BITWIDTH>(1) - 1);
-  constexpr dtype fracB = toMulB.fraction().m_data & (static_shift<dtype,true,FRAC_BITWIDTH>(1) - 1);
+  constexpr dtype fracA = toMulA.fixed_fraction();
+  constexpr dtype fracB = toMulB.fixed_fraction();
 
   dtype finalPower = powerA + powerB;
 
@@ -582,7 +582,7 @@ posit<BITS,ES>::data_to_posit(typename posit<BITS,ES>::posit_data_t dat) noexcep
 template<int BITS, int ES>
 constexpr posit<BITS,ES>::posit() noexcept : m_data{0} 
 { 
-  static_assert(ES <= max_exponent<BITS>(), "ES would generate powers beyond maximum representable within provided bitwidth.");
+  static_assert(ES <= max_exponent<BITS>(), "ES would generate powers beyond maximum representable value within provided bitwidth.");
 }
 
 template<int BITS, int ES>
@@ -1188,7 +1188,6 @@ posit<BITS,ES>::prior() const noexcept
 }
 
 
-
 //--------------------------------------------------
 // operators
 //--------------------------------------------------
@@ -1305,9 +1304,64 @@ template<int32_t BITS, int32_t ES>
 constexpr posit<BITS,ES>
 posit<BITS,ES>::operator*(const posit<BITS,ES>& rhs) const noexcept
 {
+  using posit_data_t = typename posit<BITS,ES>::posit_data_t;
+  using u_posit_data_t = std::make_unsigned_t<posit_data_t>;
   if (this->isNaR() || rhs.isNaR()) return NaR();
-  if (*this == 0 || rhs == 0) return rhs;
+  if (*this == 0 || rhs == 0) return data_to_posit(0);
 
+  posit_data_t left_power = this->power();
+  posit_data_t right_power = rhs.power();
+
+  bool result_sign = (this->sign() < 0)^(rhs->sign() < 0);
+
+  if((left_power ^ right_power) > 0) // same-sign powers might overflow
+  {
+    u_posit_data_t result_power_test = std::abs(left_power) + std::abs(right_power);
+    if(result_power_test >= maxPos().power())
+      return result_sign ? maxPos().negate() : maxPos();
+  }
+  posit_data_t result_power = left_power + right_power;
+  if(result_power <= minPos().power())
+    return result_sign ? minPos().negate() : minPos();
+
+  posit_data_t fracA = this->fixed_fraction();
+  posit_data_t fracB = rhs.fixed_fraction();
+
+  posit_data_t offset_A = countl_zero(fracA);
+  posit_data_t offset_B = countl_zero(fracB);
+
+  auto hi = [](posit_data_t x) { return       static_shift<posit_data_t,false,FRAC_BITWIDTH/2>(x);       };
+  auto lo = [](posit_data_t x) { return (x & (static_shift<posit_data_t,true ,FRAC_BITWIDTH/2>(1) - 1)); };
+
+  posit_data_t x = lo(fracA) * lo(fracB);
+  posit_data_t s0 = lo(x);
+
+  posit_data_t x2 = hi(fracA) * lo(fracB) + hi(x);
+  posit_data_t s1 = lo(x2);
+  posit_data_t s2 = hi(x2);
+
+  posit_data_t x3 = s1 + lo(fracA) * hi(fracB);
+  posit_data_t s1_2 = lo(x3);
+
+  posit_data_t x4 = s2 + hi(fracA) * hi(fracB) + hi(x3);
+  posit_data_t s2_2 = lo(x4);
+  posit_data_t s3 = hi(x4);
+
+  // result is 2xFRAC_BITWIDTH long;
+  posit_data_t result = static_shift<posit_data_t,true,FRAC_BITWIDTH/2>(s1_2) | s0;
+  posit_data_t carry  = static_shift<posit_data_t,true,FRAC_BITWIDTH/2>(s3  ) | s2_2;
+
+  posit_data_t carry_offset  = countl_zero(carry);
+  posit_data_t result_offset = countl_zero(result);
+
+  // if we didn't overflow
+  if(carry == 0) {
+    // Shift all the bits into carry, then do the normal carry algorithm
+    carry = result;
+    result = 0;
+  }
+  // if we did overflow into carry
+  
 }
 
 template<int32_t BITS, int32_t ES>

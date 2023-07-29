@@ -22,5 +22,5 @@ void print_max_posit()
 int main()
 {
   // print_all_posits<6,4>();
-  print_max_posit<16>();
+  print_max_posit<8>();
 }
